@@ -7,34 +7,47 @@ on:
 
 jobs:
   build:
-    name: Build for iOS and Android
     runs-on: macos-latest
+    permissions:
+      contents: write   # Wichtig für Tag-Erstellung + Releases
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # notwendig, um Tags erstellen zu können
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.38.4"
 
-      - name: Disable Flutter analytics
+      - name: Disable analytics
         run: flutter config --no-analytics
 
-      - name: Get Dependencies
+      - name: Get dependencies
         run: flutter pub get
 
-      - name: Extract version from pubspec.yaml
+      - name: Read version from pubspec.yaml
         id: version
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Create tag if not exists
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG exists"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
       - name: Build Android APK
         run: flutter build apk --release
 
-      - name: Build iOS (unsigned .app)
+      - name: Build iOS unsigned
         run: flutter build ios --release --no-codesign
 
       - name: Create unsigned IPA manually
@@ -47,8 +60,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Picsync v${{ steps.version.outputs.version }}"
           tag_name: "v${{ steps.version.outputs.version }}"
+          name: "Picsync v${{ steps.version.outputs.version }}"
           files: |
             build/app/outputs/flutter-apk/app-release.apk
             build/ios/ipa/Picsync-${{ steps.version.outputs.version }}.ipa
