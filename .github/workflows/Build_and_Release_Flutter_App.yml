@@ -9,13 +9,13 @@ jobs:
   build:
     runs-on: macos-latest
     permissions:
-      contents: write   # Wichtig für Tag-Erstellung + Releases
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # notwendig, um Tags erstellen zu können
+          fetch-depth: 0
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -28,13 +28,18 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Read version from pubspec.yaml
+      - name: Extract version
         id: version
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
 
-      - name: Create tag if not exists
+      ##########################################################
+      #                 Release & Tag zuerst
+      ##########################################################
+
+      - name: Create tag if missing
         run: |
           TAG="v${{ steps.version.outputs.version }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -44,27 +49,44 @@ jobs:
             git push origin "$TAG"
           fi
 
+      - name: Create (or reuse) GitHub release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "Picsync v${{ steps.version.outputs.version }}"
+          body: "Automatischer Build"
+          make_latest: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      ##########################################################
+      #                 App bauen (APK + IPA)
+      ##########################################################
+
       - name: Build Android APK
         run: flutter build apk --release
 
       - name: Build iOS unsigned
         run: flutter build ios --release --no-codesign
 
-      - name: Create unsigned IPA manually
+      - name: Create unsigned IPA
         run: |
           mkdir -p build/ios/ipa/Payload
           cp -R build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
           zip -r Picsync-${{ steps.version.outputs.version }}.ipa Payload
 
-      - name: Create GitHub Release
+      ##########################################################
+      #                  Dateien in Release laden
+      ##########################################################
+
+      - name: Upload files to existing release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ steps.version.outputs.version }}"
-          name: "Picsync v${{ steps.version.outputs.version }}"
           files: |
             build/app/outputs/flutter-apk/app-release.apk
             build/ios/ipa/Picsync-${{ steps.version.outputs.version }}.ipa
-          make_latest: true
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
