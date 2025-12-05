@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: macos-latest
     permissions:
-      contents: write
+      contents: write   # wichtig für Tag + Release löschen/erstellen
 
     steps:
       - name: Checkout
@@ -25,7 +25,7 @@ jobs:
       - name: Disable analytics
         run: flutter config --no-analytics
 
-      - name: Get dependencies
+      - name: Pub get
         run: flutter pub get
 
       - name: Extract version
@@ -33,11 +33,7 @@ jobs:
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected version: $VERSION"
-
-      ##########################################################
-      #                 Release & Tag zuerst
-      ##########################################################
+          echo "Using version: $VERSION"
 
       - name: Create tag if missing
         run: |
@@ -49,44 +45,41 @@ jobs:
             git push origin "$TAG"
           fi
 
-      - name: Create (or reuse) GitHub release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "v${{ steps.version.outputs.version }}"
-          name: "Picsync v${{ steps.version.outputs.version }}"
-          body: "Automatischer Build"
-          make_latest: true
+      - name: Delete release if exists
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          RELEASE_ID=$(gh release view "$TAG" --json id -q ".id" || echo "")
+          if [ "$RELEASE_ID" != "" ]; then
+            gh release delete "$TAG" -y
+          fi
 
-      ##########################################################
-      #                 App bauen (APK + IPA)
-      ##########################################################
+      - name: Create fresh release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          gh release create "$TAG" --title "Picsync $TAG" --notes "Automatischer Build"
 
-      - name: Build Android APK
+      - name: Build APK
         run: flutter build apk --release
 
       - name: Build iOS unsigned
         run: flutter build ios --release --no-codesign
 
-      - name: Create unsigned IPA
+      - name: Create IPA
         run: |
           mkdir -p build/ios/ipa/Payload
           cp -R build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
           zip -r Picsync-${{ steps.version.outputs.version }}.ipa Payload
 
-      ##########################################################
-      #                  Dateien in Release laden
-      ##########################################################
-
-      - name: Upload files to existing release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "v${{ steps.version.outputs.version }}"
-          files: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/ios/ipa/Picsync-${{ steps.version.outputs.version }}.ipa
+      - name: Upload assets
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          gh release upload "$TAG" \
+            build/app/outputs/flutter-apk/app-release.apk \
+            build/ios/ipa/Picsync-${{ steps.version.outputs.version }}.ipa
