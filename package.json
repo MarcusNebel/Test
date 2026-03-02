@@ -1,15 +1,48 @@
 {
     "name": "jimce-deezer-api",
     "version": "0.1.0",
-    "description": "An API client for deezer",
+    "description": "A TypeScript Deezer API client for Node.js",
     "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
     "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "prepublishOnly": "npm run build",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "keywords": [],
+    "keywords": [
+        "deezer",
+        "api",
+        "music",
+        "client",
+        "typescript",
+        "node"
+    ],
     "author": "MarcusNebel (https://github.com/MarcusNebel)",
     "license": "MIT",
-    "types": "dist/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Jimce-Music/jimce-deezer-api.git"
+    },
+    "homepage": "https://github.com/Jimce-Music/jimce-deezer-api#readme",
+    "bugs": {
+        "url": "https://github.com/Jimce-Music/jimce-deezer-api/issues"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "devDependencies": {
         "@types/node": "^25.3.3",
         "typescript": "^5.9.3"
