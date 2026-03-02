@@ -109,6 +109,56 @@ npm run build
 npm run dev
 ```
 
+### Testing
+
+Das Package hat zwei verschiedene Test-Suites:
+
+#### 1. Integration Tests (mit Mocking)
+Normale Unit-Tests mit gemockten API-Responses:
+
+```bash
+npm test
+```
+
+Diese Tests:
+- ✅ Mocken die Fetch-Requests
+- ✅ Testen die Kodierung von Parametern
+- ✅ Testen Error-Handling
+- ✅ Vollständig isoliert von der echten API
+
+#### 2. Funktionstests (gegen echte API)
+End-to-End Tests gegen die REAL Deezer API:
+
+```bash
+npm run test:functional
+```
+
+Diese Tests validieren:
+- ✅ Alle 13 API-Endpoints funktionieren
+- ✅ Response-Strukturen sind korrekt
+- ✅ Datentypen stimmen
+- ✅ Gleichzeitige Requests funktionieren
+
+#### Alle Tests
+```bash
+npm run test:all
+```
+
+#### Watch Mode
+```bash
+npm run test:watch
+```
+
+### Test-Struktur
+```
+tests/
+├── integration/
+│   └── deezer-client.integration.test.ts  (Mocked Tests)
+├── functional/
+│   └── deezer-api.functional.test.ts      (Real API Tests)
+└── setup.ts
+```
+
 ## Lizenz
 
 MIT

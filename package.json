@@ -19,8 +19,11 @@
     "scripts": {
         "build": "tsc",
         "dev": "tsc --watch",
-        "prepublishOnly": "npm run build",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "jest tests/integration",
+        "test:functional": "jest tests/functional",
+        "test:all": "jest",
+        "test:watch": "jest --watch",
+        "prepublishOnly": "npm run build"
     },
     "keywords": [
         "deezer",
@@ -44,7 +47,10 @@
         "node": ">=18.0.0"
     },
     "devDependencies": {
+        "@types/jest": "^30.0.0",
         "@types/node": "^25.3.3",
+        "jest": "^30.2.0",
+        "ts-jest": "^29.1.1",
         "typescript": "^5.9.3"
     }
 }
